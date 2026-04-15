@@ -167,5 +167,3 @@ class TestColorStore:
         assert store.bind_key == "a"
         assert store.output_folder == "./test"
         assert f"Config loaded from {config_file}" in caplog.text
-
-

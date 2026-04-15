@@ -1,5 +1,3 @@
-
-
 class TestConstant:
     def test_is_valid_color(self):
         from ddnet_change_color.constant import is_valid_color

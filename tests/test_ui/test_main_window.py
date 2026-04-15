@@ -106,9 +106,7 @@ class TestMainWindow:
         window.store.save()
         window._load_colors()
 
-        with patch(
-            "ddnet_change_color.ui.main_window.QGuiApplication.clipboard"
-        ) as mock_clipboard:
+        with patch("ddnet_change_color.ui.main_window.QGuiApplication.clipboard") as mock_clipboard:
             window.copy_color(0)
             mock_clipboard.return_value.setText.assert_called_once_with("#66ccff")
 
@@ -302,9 +300,7 @@ class TestMainWindow:
         with patch("ddnet_change_color.ui.main_window.QMessageBox.question") as mock_question:
             mock_question.return_value = QMessageBox.StandardButton.Yes
 
-            with patch(
-                "ddnet_change_color.ui.main_window.QMessageBox.information"
-            ) as mock_info:
+            with patch("ddnet_change_color.ui.main_window.QMessageBox.information") as mock_info:
                 window.export_config()
 
                 mock_question.assert_called_once()
@@ -335,5 +331,3 @@ class TestMainWindow:
 
         event.accept.assert_called_once()
         assert window.store.colors == ["#12231a", "#66ccff"]
-
-

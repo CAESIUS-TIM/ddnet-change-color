@@ -66,5 +66,3 @@ class TestSettingsDialog:
 
             mock_get_dir.assert_called_once_with(dialog, "选择输出目录", "./initial")
             assert dialog.folder_edit.text() == "/selected/folder"
-
-

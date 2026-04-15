@@ -29,7 +29,5 @@ class ColorItemWidget(QWidget):
 
     def update_color(self, hex_color: str):
         self.hex_color = hex_color
-        self.color_label.setStyleSheet(
-            f"background-color: {hex_color}; border: 1px solid #aaa;"
-        )
+        self.color_label.setStyleSheet(f"background-color: {hex_color}; border: 1px solid #aaa;")
         self.hex_label.setText(hex_color.upper())

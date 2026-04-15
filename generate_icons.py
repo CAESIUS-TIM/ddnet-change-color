@@ -33,9 +33,9 @@ def create_simple_icon(size: int = 256) -> Image.Image:
     # 背景：DDNet 蓝渐变
     for i in range(size):
         # 简单的渐变效果
-        r = int(45 * (1 - i/size) + 26 * (i/size))  # #2D7DD2 到 #1A5CA6
-        g = int(125 * (1 - i/size) + 92 * (i/size))
-        b = int(210 * (1 - i/size) + 166 * (i/size))
+        r = int(45 * (1 - i / size) + 26 * (i / size))  # #2D7DD2 到 #1A5CA6
+        g = int(125 * (1 - i / size) + 92 * (i / size))
+        b = int(210 * (1 - i / size) + 166 * (i / size))
         draw.line([(0, i), (size, i)], fill=(r, g, b, 255))
 
     # 调色盘
@@ -46,17 +46,17 @@ def create_simple_icon(size: int = 256) -> Image.Image:
             palette_center[0] - palette_radius,
             palette_center[1] - int(palette_radius * 0.86),
             palette_center[0] + palette_radius,
-            palette_center[1] + int(palette_radius * 0.86)
+            palette_center[1] + int(palette_radius * 0.86),
         ],
         fill=(255, 255, 255, 230),
         outline=(255, 255, 255, 180),
-        width=2
+        width=2,
     )
 
     # 颜色点
     colors = [
-        (255, 153, 0, 255),    # 橙色 #FF9900
-        (45, 125, 210, 255),   # DDNet 蓝 #2D7DD2
+        (255, 153, 0, 255),  # 橙色 #FF9900
+        (45, 125, 210, 255),  # DDNet 蓝 #2D7DD2
         (102, 204, 255, 255),  # 浅蓝 #66CCFF
     ]
 
@@ -68,7 +68,7 @@ def create_simple_icon(size: int = 256) -> Image.Image:
             [x - radius, y - radius, x + radius, y + radius],
             fill=color,
             outline=(255, 255, 255, 200),
-            width=2
+            width=2,
         )
 
     # DCC 文字
@@ -91,16 +91,11 @@ def create_simple_icon(size: int = 256) -> Image.Image:
         fill=(255, 255, 255, 220),
         font=font,
         stroke_width=1,
-        stroke_fill=(0, 0, 0, 80)
+        stroke_fill=(0, 0, 0, 80),
     )
 
     # 外边框
-    draw.ellipse(
-        [4, 4, size - 4, size - 4],
-        fill=None,
-        outline=(255, 255, 255, 100),
-        width=4
-    )
+    draw.ellipse([4, 4, size - 4, size - 4], fill=None, outline=(255, 255, 255, 100), width=4)
 
     return img
 
@@ -137,10 +132,10 @@ def create_placeholder_files():
     ico_placeholder = windows_dir / "icon.ico"
     with open(ico_placeholder, "wb") as f:
         # 简单的 ICO 文件头（无效但占位）
-        f.write(b'ICO_PLACEHOLDER - Replace with actual .ico file\n')
-        f.write(b'To create proper .ico file:\n')
-        f.write(b'1. Use ImageMagick: convert icon_*.png icon.ico\n')
-        f.write(b'2. Or use online converter\n')
+        f.write(b"ICO_PLACEHOLDER - Replace with actual .ico file\n")
+        f.write(b"To create proper .ico file:\n")
+        f.write(b"1. Use ImageMagick: convert icon_*.png icon.ico\n")
+        f.write(b"2. Or use online converter\n")
 
     print(f"  ⚠  创建占位符 {ico_placeholder}")
     print("     提示：需要手动转换为有效的 .ico 文件")
@@ -151,10 +146,10 @@ def create_placeholder_files():
 
     icns_placeholder = macos_dir / "icon.icns"
     with open(icns_placeholder, "wb") as f:
-        f.write(b'ICNS_PLACEHOLDER - Replace with actual .icns file\n')
-        f.write(b'To create proper .icns file on macOS:\n')
-        f.write(b'1. Create .iconset directory with PNG files\n')
-        f.write(b'2. Run: iconutil -c icns icon.iconset\n')
+        f.write(b"ICNS_PLACEHOLDER - Replace with actual .icns file\n")
+        f.write(b"To create proper .icns file on macOS:\n")
+        f.write(b"1. Create .iconset directory with PNG files\n")
+        f.write(b"2. Run: iconutil -c icns icon.iconset\n")
 
     print(f"  ⚠  创建占位符 {icns_placeholder}")
     print("     提示：需要在 macOS 上创建 .icns 文件")
