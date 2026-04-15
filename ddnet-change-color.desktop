@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=DDNet Change Color
+GenericName=DDNet Color Configuration Tool
+Comment=Create and manage color configurations for DDNet client
+Exec=ddnet-change-color
+Icon=ddnet-change-color
+Terminal=false
+Categories=Utility;Game;
+StartupNotify=true
+Keywords=ddnet;color;configuration;tool;
+X-GNOME-FullName=DDNet Change Color Tool
+X-GNOME-Autostart-Enabled=false
+X-GNOME-Autostart-Delay=0

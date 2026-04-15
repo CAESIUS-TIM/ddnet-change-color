@@ -1,0 +1,4 @@
+ICO_PLACEHOLDER - Replace with actual .ico file
+To create proper .ico file:
+1. Use ImageMagick: convert icon_*.png icon.ico
+2. Or use online converter

@@ -1,0 +1,4 @@
+ICNS_PLACEHOLDER - Replace with actual .icns file
+To create proper .icns file on macOS:
+1. Create .iconset directory with PNG files
+2. Run: iconutil -c icns icon.iconset

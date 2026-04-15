@@ -1,0 +1,203 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    tags-ignore: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.14", "3.13", "3.12"]
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+      with:
+        version: "0.5.0"
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: uv sync --dev
+    
+    - name: Run linting
+      run: uv run ruff check .
+    
+    - name: Run formatting check
+      run: uv run ruff format --check .
+    
+    - name: Run type checking
+      run: uv run pyright
+    
+    - name: Run tests with coverage
+      run: uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+    
+    - name: Build verification
+      run: |
+        uv run python build.py --validate
+        uv run python -m ddnet_change_color --help
+
+  windows-build-test:
+    name: Windows Build Test
+    runs-on: windows-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+      with:
+        version: "0.5.0"
+    
+    - name: Set up Python
+      run: uv python install 3.14
+    
+    - name: Install dependencies
+      run: uv sync --dev --group build
+    
+    - name: Generate icons (Windows)
+      run: |
+        python generate_icons.py --platform windows
+        if (-not (Test-Path "assets/windows/icon.ico")) {
+          Write-Host "Warning: Windows icon not generated, creating placeholder"
+          New-Item -ItemType Directory -Force -Path "assets/windows"
+          # Create minimal ICO placeholder
+          $icoBytes = [byte[]]@(0,0,1,0,1,0,1,1,0,0,1,0,24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+          [System.IO.File]::WriteAllBytes("assets/windows/icon.ico", $icoBytes)
+        }
+    
+    - name: Validate Windows build environment
+      run: uv run python build.py --platform windows --validate
+    
+    - name: Test Windows build (directory mode)
+      run: |
+        uv run python build.py --platform windows --no-onefile --clean
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "Build failed, checking logs"
+          exit 1
+        }
+
+  macos-build-test:
+    name: macOS Build Test
+    runs-on: macos-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+      with:
+        version: "0.5.0"
+    
+    - name: Set up Python
+      run: uv python install 3.14
+    
+    - name: Install dependencies
+      run: uv sync --dev --group build
+    
+    - name: Generate icons (macOS)
+      run: python generate_icons.py --platform macos
+    
+    - name: Validate macOS build environment
+      run: uv run python build.py --platform darwin --validate
+    
+    - name: Test macOS build (directory mode)
+      run: |
+        uv run python build.py --platform darwin --no-onefile --clean
+        if [ $? -ne 0 ]; then
+          echo "Build failed, checking logs"
+          exit 1
+        fi
+
+  linux-build-test:
+    name: Linux Build Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+      with:
+        version: "0.5.0"
+    
+    - name: Set up Python
+      run: uv python install 3.14
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 libxcb-xfixes0 libxcb-xkb1 libxcb-xv0 libfontconfig1 libfreetype6 libgl1-mesa-glx libxcb-cursor0
+        # UPX for compression
+        sudo apt-get install -y upx
+    
+    - name: Install dependencies
+      run: uv sync --dev --group build
+    
+    - name: Generate icons (Linux)
+      run: python generate_icons.py --platform linux
+    
+    - name: Validate Linux build environment
+      run: uv run python build.py --platform linux --validate
+    
+    - name: Test Linux build (directory mode)
+      run: |
+        uv run python build.py --platform linux --no-onefile --clean
+        if [ $? -ne 0 ]; then
+          echo "Build failed, checking logs"
+          exit 1
+        fi
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [test, windows-build-test, macos-build-test, linux-build-test]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+    
+    - name: Set up Python
+      run: uv python install 3.14
+    
+    - name: Install dependencies
+      run: uv sync --dev
+    
+    - name: Check minimum coverage
+      run: |
+        coverage=$(uv run pytest --cov=ddnet_change_color --cov-report=term | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
+        echo "Coverage: ${coverage}%"
+        if (( $(echo "$coverage < 94" | bc -l) )); then
+          echo "Error: Coverage below 94%"
+          exit 1
+        fi
+    
+    - name: All checks passed
+      run: echo "✅ All quality checks passed"

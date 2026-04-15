@@ -1,7 +1,8 @@
 import sys
-from ddnet_change_color.widget import MainWindow
-from PyQt6.QtWidgets import QApplication
-from ddnet_change_color.log import setup_logging
+from PySide6.QtWidgets import QApplication
+
+from .log import setup_logging
+from .ui.main_window import MainWindow
 
 
 def main():

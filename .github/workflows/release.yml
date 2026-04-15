@@ -1,0 +1,354 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get version from tag
+      id: get_version
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag -replace '^v', ''
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        echo "TAG=$tag" >> $env:GITHUB_OUTPUT
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+      with:
+        version: "0.5.0"
+    
+    - name: Set up Python
+      run: uv python install 3.14
+    
+    - name: Install build dependencies
+      run: uv sync --group build
+    
+    - name: Generate Windows icons
+      run: |
+        python generate_icons.py --platform windows
+        if (-not (Test-Path "assets/windows/icon.ico")) {
+          Write-Host "Creating placeholder ICO file"
+          # Minimal valid ICO file (16x16 1bpp)
+          $icoBytes = [byte[]]@(
+            0,0,1,0,1,0,16,16,0,0,1,0,24,0,40,6,
+            0,0,22,0,0,0,40,0,0,0,16,0,0,0,32,0,
+            0,0,1,0,24,0,0,0,0,0,0,6,0,0,0,0,
+            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+          )
+          New-Item -ItemType Directory -Force -Path "assets/windows"
+          [System.IO.File]::WriteAllBytes("assets/windows/icon.ico", $icoBytes)
+        }
+    
+    - name: Update version info
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        (Get-Content "version_info.txt") -replace 'FILEVERSION\s+\d+,\d+,\d+,\d+', "FILEVERSION $($version -replace '\.', ','),0" | Set-Content "version_info.txt"
+        (Get-Content "version_info.txt") -replace 'PRODUCTVERSION\s+\d+,\d+,\d+,\d+', "PRODUCTVERSION $($version -replace '\.', ','),0" | Set-Content "version_info.txt"
+        (Get-Content "version_info.txt") -replace 'VALUE "FileVersion", "[^"]*"', "VALUE `"FileVersion`", `"$version`"" | Set-Content "version_info.txt"
+        (Get-Content "version_info.txt") -replace 'VALUE "ProductVersion", "[^"]*"', "VALUE `"ProductVersion`", `"$version`"" | Set-Content "version_info.txt"
+    
+    - name: Build Windows executable
+      run: |
+        uv run python build.py --platform windows --clean
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "Build failed"
+          exit 1
+        }
+    
+    - name: Rename Windows artifact
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $exePath = "dist/ddnet-change-color-windows-$version.exe"
+        Move-Item "dist/ddnet-change-color-windows.exe" $exePath -Force
+        echo "ARTIFACT_PATH=$exePath" >> $env:GITHUB_OUTPUT
+      id: rename_windows
+    
+    - name: Calculate SHA256 checksum (Windows)
+      run: |
+        $file = "${{ steps.rename_windows.outputs.ARTIFACT_PATH }}"
+        $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+        $hash | Out-File "$file.sha256.txt"
+        echo "File: $(Split-Path -Leaf $file)" >> "$file.sha256.txt"
+        echo "SHA256: $hash" >> "$file.sha256.txt"
+    
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: |
+          ${{ steps.rename_windows.outputs.ARTIFACT_PATH }}
+          ${{ steps.rename_windows.outputs.ARTIFACT_PATH }}.sha256.txt
+        retention-days: 1
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get version from tag
+      id: get_version
+      run: |
+        TAG="${{ github.ref_name }}"
+        VERSION="${TAG#v}"
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "TAG=$TAG" >> $GITHUB_OUTPUT
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+      with:
+        version: "0.5.0"
+    
+    - name: Set up Python
+      run: uv python install 3.14
+    
+    - name: Install build dependencies
+      run: uv sync --group build
+    
+    - name: Generate macOS icons
+      run: python generate_icons.py --platform macos
+    
+    - name: Update Info.plist version
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        sed -i '' "s|<string>[0-9.]*</string>|<string>$VERSION</string>|g" Info.plist.template
+    
+    - name: Build macOS application
+      run: |
+        uv run python build.py --platform darwin --clean
+        if [ $? -ne 0 ]; then
+          echo "Build failed"
+          exit 1
+        fi
+    
+    - name: Package macOS application
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        APP_NAME="DDNet Change Color"
+        
+        # Create DMG or ZIP
+        cd dist
+        zip -r "ddnet-change-color-macos-$VERSION.zip" "$APP_NAME.app"
+        echo "ARTIFACT_PATH=dist/ddnet-change-color-macos-$VERSION.zip" >> $GITHUB_OUTPUT
+      id: package_macos
+    
+    - name: Calculate SHA256 checksum (macOS)
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        FILE="dist/ddnet-change-color-macos-$VERSION.zip"
+        shasum -a 256 "$FILE" > "$FILE.sha256.txt"
+        echo "File: $(basename "$FILE")" >> "$FILE.sha256.txt"
+        echo "SHA256: $(shasum -a 256 "$FILE" | cut -d' ' -f1)" >> "$FILE.sha256.txt"
+    
+    - name: Upload macOS artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build
+        path: |
+          ${{ steps.package_macos.outputs.ARTIFACT_PATH }}
+          ${{ steps.package_macos.outputs.ARTIFACT_PATH }}.sha256.txt
+        retention-days: 1
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get version from tag
+      id: get_version
+      run: |
+        TAG="${{ github.ref_name }}"
+        VERSION="${TAG#v}"
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "TAG=$TAG" >> $GITHUB_OUTPUT
+    
+    - name: Install uv
+      uses: astral-sh/uv-action@v2
+      with:
+        version: "0.5.0"
+    
+    - name: Set up Python
+      run: uv python install 3.14
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libxcb-xinerama0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-shape0 \
+          libxcb-sync1 \
+          libxcb-xfixes0 \
+          libxcb-xkb1 \
+          libxcb-xv0 \
+          libfontconfig1 \
+          libfreetype6 \
+          libgl1-mesa-glx \
+          libxcb-cursor0 \
+          upx
+    
+    - name: Install build dependencies
+      run: uv sync --group build
+    
+    - name: Generate Linux icons
+      run: python generate_icons.py --platform linux
+    
+    - name: Update .desktop file version
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        sed -i "s/Version=.*/Version=$VERSION/" ddnet-change-color.desktop
+    
+    - name: Build Linux executable
+      run: |
+        uv run python build.py --platform linux --clean
+        if [ $? -ne 0 ]; then
+          echo "Build failed"
+          exit 1
+        fi
+    
+    - name: Package Linux executable
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        EXECUTABLE="dist/ddnet-change-color-linux"
+        
+        # Rename with version
+        mv "$EXECUTABLE" "$EXECUTABLE-$VERSION"
+        chmod +x "$EXECUTABLE-$VERSION"
+        
+        # Create archive
+        cd dist
+        tar czf "ddnet-change-color-linux-$VERSION.tar.gz" "ddnet-change-color-linux-$VERSION"
+        echo "ARTIFACT_PATH=dist/ddnet-change-color-linux-$VERSION.tar.gz" >> $GITHUB_OUTPUT
+      id: package_linux
+    
+    - name: Calculate SHA256 checksum (Linux)
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        FILE="dist/ddnet-change-color-linux-$VERSION.tar.gz"
+        shasum -a 256 "$FILE" > "$FILE.sha256.txt"
+        echo "File: $(basename "$FILE")" >> "$FILE.sha256.txt"
+        echo "SHA256: $(shasum -a 256 "$FILE" | cut -d' ' -f1)" >> "$FILE.sha256.txt"
+    
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-build
+        path: |
+          ${{ steps.package_linux.outputs.ARTIFACT_PATH }}
+          ${{ steps.package_linux.outputs.ARTIFACT_PATH }}.sha256.txt
+        retention-days: 1
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos, build-linux]
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+    
+    - name: List downloaded files
+      run: find . -type f -name "*.exe" -o -name "*.zip" -o -name "*.tar.gz" -o -name "*.sha256.txt"
+    
+    - name: Get version from tag
+      id: get_version
+      run: |
+        TAG="${{ github.ref_name }}"
+        VERSION="${TAG#v}"
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "TAG=$TAG" >> $GITHUB_OUTPUT
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        TAG="${{ steps.get_version.outputs.TAG }}"
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        
+        # Get commit history since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || echo "")
+        
+        if [ -n "$LAST_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "$LAST_TAG".."$TAG")
+        else
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" --max-count=20)
+        fi
+        
+        cat > release_notes.md << EOF
+        # DDNet Change Color $VERSION
+        
+        ## 下载
+        
+        **Windows:**
+        - \`ddnet-change-color-windows-$VERSION.exe\` - 单文件可执行程序
+        - SHA256: \`$(cat ./windows-build/ddnet-change-color-windows-$VERSION.exe.sha256.txt | grep SHA256: | cut -d' ' -f2)\`
+        
+        **macOS:**
+        - \`ddnet-change-color-macos-$VERSION.zip\` - 应用程序包 (.app)
+        - SHA256: \`$(cat ./macos-build/ddnet-change-color-macos-$VERSION.zip.sha256.txt | grep SHA256: | cut -d' ' -f2)\`
+        
+        **Linux:**
+        - \`ddnet-change-color-linux-$VERSION.tar.gz\` - 可执行文件
+        - SHA256: \`$(cat ./linux-build/ddnet-change-color-linux-$VERSION.tar.gz.sha256.txt | grep SHA256: | cut -d' ' -f2)\`
+        
+        ## 变更日志
+        
+        $CHANGELOG
+        
+        ## 校验和验证
+        
+        \`\`\`bash
+        # Windows
+        certutil -hashfile ddnet-change-color-windows-$VERSION.exe SHA256
+        
+        # macOS
+        shasum -a 256 ddnet-change-color-macos-$VERSION.zip
+        
+        # Linux
+        sha256sum ddnet-change-color-linux-$VERSION.tar.gz
+        \`\`\`
+        EOF
+        
+        echo "RELEASE_NOTES_PATH=release_notes.md" >> $GITHUB_OUTPUT
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: DDNet Change Color ${{ steps.get_version.outputs.VERSION }}
+        body_path: ${{ steps.release_notes.outputs.RELEASE_NOTES_PATH }}
+        draft: false
+        prerelease: false
+        files: |
+          ./windows-build/ddnet-change-color-windows-${{ steps.get_version.outputs.VERSION }}.exe
+          ./windows-build/ddnet-change-color-windows-${{ steps.get_version.outputs.VERSION }}.exe.sha256.txt
+          ./macos-build/ddnet-change-color-macos-${{ steps.get_version.outputs.VERSION }}.zip
+          ./macos-build/ddnet-change-color-macos-${{ steps.get_version.outputs.VERSION }}.zip.sha256.txt
+          ./linux-build/ddnet-change-color-linux-${{ steps.get_version.outputs.VERSION }}.tar.gz
+          ./linux-build/ddnet-change-color-linux-${{ steps.get_version.outputs.VERSION }}.tar.gz.sha256.txt
