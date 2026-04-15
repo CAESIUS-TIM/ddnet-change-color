@@ -8,11 +8,11 @@
 - from ddnet_change_color.ui.main_window import MainWindow
 """
 
-from .models.color_store import ColorStore
 from .dialogs.settings_dialog import SettingsDialog
-from .widgets.color_list import ColorListWidget
-from .widgets.color_item import ColorItemWidget
+from .models.color_store import ColorStore
 from .ui.main_window import MainWindow
+from .widgets.color_item import ColorItemWidget
+from .widgets.color_list import ColorListWidget
 
 __all__ = [
     "ColorStore",

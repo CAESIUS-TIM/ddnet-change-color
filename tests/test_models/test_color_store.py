@@ -1,7 +1,4 @@
 import json
-from unittest.mock import patch
-
-import pytest
 
 from ddnet_change_color.models.color_store import ColorStore
 
@@ -158,8 +155,9 @@ class TestColorStore:
         with open(config_file, "w") as f:
             json.dump(data, f)
 
-        from ddnet_change_color.widget import ColorStore
         import logging
+
+        from ddnet_change_color.widget import ColorStore
 
         caplog.set_level(logging.INFO)
 

@@ -2,11 +2,9 @@
 
 import json
 import logging
-from pathlib import Path
-from typing import override
 
 from ..config import CONFIG_DIR, CONFIG_FILE
-from ..constant import is_valid_color, is_valid_bind_key
+from ..constant import is_valid_bind_key, is_valid_color
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import QMessageBox
 
@@ -16,6 +16,7 @@ class TestMainWindow:
 
     def test_add_color(self, temp_config_dir, qtbot):
         from PySide6.QtGui import QColor
+
         from ddnet_change_color.widget import MainWindow
 
         window = MainWindow()
@@ -63,6 +64,7 @@ class TestMainWindow:
 
     def test_add_color_at_index(self, temp_config_dir, qtbot):
         from PySide6.QtGui import QColor
+
         from ddnet_change_color.widget import MainWindow
 
         window = MainWindow()
@@ -112,6 +114,7 @@ class TestMainWindow:
 
     def test_context_menu_modify(self, temp_config_dir, qtbot):
         from PySide6.QtGui import QColor
+
         from ddnet_change_color.widget import MainWindow
 
         window = MainWindow()
@@ -167,8 +170,9 @@ class TestMainWindow:
         assert window.list_widget.count() == 1
 
     def test_close_event_saves_order(self, temp_config_dir, qtbot):
-        from ddnet_change_color.widget import MainWindow
         from unittest.mock import MagicMock
+
+        from ddnet_change_color.widget import MainWindow
 
         window = MainWindow()
         qtbot.addWidget(window)
@@ -278,8 +282,9 @@ class TestMainWindow:
         window.on_item_clicked(None)
 
     def test_export_config_clear_folder(self, temp_config_dir, qtbot, tmp_path):
-        from ddnet_change_color.widget import MainWindow
         from PySide6.QtWidgets import QMessageBox
+
+        from ddnet_change_color.widget import MainWindow
 
         window = MainWindow()
         qtbot.addWidget(window)
@@ -309,8 +314,9 @@ class TestMainWindow:
                 assert len(list(output_dir.glob("*.cfg"))) == 2
 
     def test_close_event_saves_new_order(self, temp_config_dir, qtbot):
-        from ddnet_change_color.widget import MainWindow
         from unittest.mock import MagicMock
+
+        from ddnet_change_color.widget import MainWindow
 
         window = MainWindow()
         qtbot.addWidget(window)

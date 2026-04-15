@@ -1,11 +1,7 @@
 """共享测试配置和 fixture"""
-import json
-from pathlib import Path
-from typing import override
 
 import pytest
 
-from ddnet_change_color.config import CONFIG_DIR, CONFIG_FILE
 from ddnet_change_color.models.color_store import ColorStore
 
 
@@ -14,17 +10,15 @@ def temp_config_dir(monkeypatch: pytest.MonkeyPatch, tmp_path):
     """临时配置目录 fixture，隔离测试配置"""
     config_dir = tmp_path / ".ddnet-change-color"
     config_file = config_dir / "colors.json"
-    
+
     # Patch config module
     monkeypatch.setattr("ddnet_change_color.config.CONFIG_DIR", config_dir)
     monkeypatch.setattr("ddnet_change_color.config.CONFIG_FILE", config_file)
-    
+
     # Also patch references in modules that imported these constants
     monkeypatch.setattr("ddnet_change_color.models.color_store.CONFIG_DIR", config_dir)
     monkeypatch.setattr("ddnet_change_color.models.color_store.CONFIG_FILE", config_file)
-    monkeypatch.setattr("ddnet_change_color.ui.main_window.CONFIG_DIR", config_dir)
-    monkeypatch.setattr("ddnet_change_color.ui.main_window.CONFIG_FILE", config_file)
-    
+
     return config_dir, config_file
 
 
@@ -45,8 +39,5 @@ def sample_config_data():
     """示例配置数据 fixture"""
     return {
         "colors": ["#123456", "#789abc"],
-        "settings": {
-            "bind_key": "ctrl+t",
-            "output_folder": "./test-output"
-        }
+        "settings": {"bind_key": "ctrl+t", "output_folder": "./test-output"},
     }
