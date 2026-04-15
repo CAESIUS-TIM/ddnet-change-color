@@ -12,6 +12,13 @@
 
 ## 安装
 
+### 下载预编译版本（推荐）
+前往 [GitHub Releases](https://github.com/CAESIUS-TIM/ddnet-change-color/releases) 下载对应平台的单文件可执行程序：
+
+- **Windows**: `ddnet-change-color-windows-*.exe`
+- **macOS**: `ddnet-change-color-macos-*.zip` (解压后运行 .app)
+- **Linux**: `ddnet-change-color-linux-*.tar.gz` (解压后运行可执行文件)
+
 ### 使用 pip
 ```bash
 pip install ddnet-change-color
@@ -80,6 +87,58 @@ src/ddnet_change_color/
 - **pytest**: 测试框架
 - **ruff**: 代码检查和格式化
 - **pyright**: 静态类型检查
+- **PyInstaller**: 应用打包
+- **GitHub Actions**: CI/CD 自动化
+
+## 构建和发布
+
+### 本地构建
+```bash
+# 安装构建依赖
+uv sync --group build
+
+# 为当前平台构建单文件可执行程序
+python build.py
+
+# 为指定平台构建
+python build.py --platform windows
+python build.py --platform linux
+python build.py --platform darwin
+
+# 验证构建环境
+python build.py --validate
+
+# 清理构建目录
+python build.py --clean
+```
+
+### 发布流程
+项目使用自动化发布流程：
+
+1. **创建版本标签**
+   ```bash
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+
+2. **自动触发发布**
+   - GitHub Actions 自动为 Windows、macOS、Linux 构建单文件可执行程序
+   - 生成 SHA256 校验和
+   - 创建 GitHub Release 包含所有平台二进制文件
+
+3. **手动构建（高级）**
+   ```bash
+   # 为所有平台构建
+   python build.py --all
+   
+   # 使用目录模式（开发）
+   python build.py --no-onefile
+   ```
+
+### 平台支持
+- **Windows**: 单文件 `.exe` 程序，隐藏控制台窗口
+- **macOS**: 应用程序包 `.app`，支持代码签名
+- **Linux**: 可执行文件，支持桌面集成（.desktop 文件）
 
 ## 许可证
 
