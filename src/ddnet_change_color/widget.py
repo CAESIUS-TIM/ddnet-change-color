@@ -1,0 +1,407 @@
+import json
+import logging
+from pathlib import Path
+from typing import override
+
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QColor,
+    QGuiApplication,
+)
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QColorDialog,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QStatusBar,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
+
+from .constant import CONFIG_DIR, CONFIG_FILE, is_valid_color, is_valid_bind_key
+
+logger = logging.getLogger(__name__)
+
+
+class ColorStore:
+    def __init__(self):
+        self.colors: list[str] = []
+        self.bind_key: str = "w"
+        self.output_folder: str = "./change-colors"
+        self.load()
+
+    def load(self):
+        if not CONFIG_FILE.exists():
+            return
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                data = json.load(f)  # pyright: ignore[reportAny]
+            # 1. colors
+            colors_raw = data.get("colors", [])  # pyright: ignore[reportAny]
+            logger.debug(f"'colors_raw': {colors_raw}")
+            if not isinstance(colors_raw, list):
+                raise ValueError("'colors' must be a list")
+            valid_colors: list[str] = []
+            for color in colors_raw:  # pyright: ignore[reportUnknownVariableType]
+                if not isinstance(color, str) or not is_valid_color(color):
+                    raise ValueError(f"invalid color format: '{color}'")
+                else:
+                    logger.debug(f"Color '{color}' is valid")
+                    valid_colors.append(color)
+
+            # 2. bind_key
+            bind_key = data.get("settings", {}).get("bind_key", "w")  # pyright: ignore[reportAny]
+            logger.debug(f"'bind_key': {bind_key}")
+            if not isinstance(bind_key, str) or not is_valid_bind_key(bind_key):
+                raise ValueError(f"invalid bind key: '{bind_key}'")
+
+            # 3. output_folder
+            output_folder = data.get("settings", {}).get(  # pyright: ignore[reportAny]
+                "output_folder", "./change-colors"
+            )
+            logger.debug(f"'output_folder': {output_folder}")
+            if not isinstance(output_folder, str):
+                raise ValueError(f"invalid output path: '{output_folder}'")
+
+            # 4. atomic update
+            self.colors = valid_colors
+            self.bind_key = bind_key
+            self.output_folder = output_folder
+            logger.info(f"Config loaded from {CONFIG_FILE}")
+
+        except (json.JSONDecodeError, IOError, ValueError) as e:
+            logger.warning(f"Failed to load config from {CONFIG_FILE}: {e}")
+
+    def save(self):
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        data = {
+            "colors": self.colors,
+            "settings": {
+                "bind_key": self.bind_key,
+                "output_folder": self.output_folder,
+            },
+        }
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+
+    def add_color(self, hex_color: str):
+        if hex_color not in self.colors:
+            self.colors.append(hex_color)
+            self.save()
+
+    def remove_color(self, index: int):
+        if 0 <= index < len(self.colors):
+            self.colors.pop(index)  # pyright: ignore[reportUnusedCallResult]
+            self.save()
+
+    def update_color(self, index: int, hex_color: str):
+        if 0 <= index < len(self.colors):
+            self.colors[index] = hex_color
+            self.save()
+
+    def move_color(self, from_idx: int, to_idx: int):
+        if 0 <= from_idx < len(self.colors) and 0 <= to_idx < len(self.colors):
+            color = self.colors.pop(from_idx)
+            self.colors.insert(to_idx, color)
+            self.save()
+
+
+class SettingsDialog(QDialog):
+    def __init__(self, store: ColorStore, parent:QWidget | None =None):
+        super().__init__(parent)
+        self.store: ColorStore = store
+        self.setWindowTitle("设置")
+        self.setModal(True)
+
+        layout = QVBoxLayout(self)
+
+        bind_layout = QHBoxLayout()
+        bind_layout.addWidget(QLabel("绑定键:"))
+        self.bind_edit:QLineEdit = QLineEdit(self.store.bind_key)
+        self.bind_edit.setMaximumWidth(100)
+        bind_layout.addWidget(self.bind_edit)
+        layout.addLayout(bind_layout)
+
+        folder_layout = QHBoxLayout()
+        folder_layout.addWidget(QLabel("输出目录:"))
+        self.folder_edit: QLineEdit = QLineEdit(self.store.output_folder)
+        self.folder_edit.setReadOnly(True)
+        folder_layout.addWidget(self.folder_edit)
+        self.folder_btn: QPushButton = QPushButton("选择...")
+        self.folder_btn.clicked.connect(self.choose_folder)
+        folder_layout.addWidget(self.folder_btn)
+        layout.addLayout(folder_layout)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def choose_folder(self):
+        folder = QFileDialog.getExistingDirectory(
+            self, "选择输出目录", self.store.output_folder
+        )
+        if folder:
+            self.folder_edit.setText(folder)
+
+    @override
+    def accept(self):
+        self.store.bind_key = self.bind_edit.text().strip() or "w"
+        self.store.output_folder = self.folder_edit.text().strip() or "./change-colors"
+        self.store.save()
+        super().accept()
+
+
+class ColorListWidget(QListWidget):
+    def __init__(self, parent: QWidget | None=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+
+
+class ColorItemWidget(QWidget):
+    def __init__(self, hex_color: str, parent: QWidget | None=None):
+        super().__init__(parent)
+        self.hex_color: str = hex_color
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(5, 2, 5, 2)
+
+        self.handle_label: QLabel = QLabel("☰")
+        self.handle_label.setStyleSheet("color: #888;")
+        layout.addWidget(self.handle_label)
+
+        self.color_label: QLabel = QLabel()
+        self.color_label.setFixedSize(40, 25)
+        layout.addWidget(self.color_label)
+
+        self.hex_label: QLabel = QLabel(hex_color.upper())
+        self.hex_label.setStyleSheet("font-family: monospace;")
+        layout.addWidget(self.hex_label)
+
+        layout.addStretch()
+
+        self.update_color(hex_color)
+
+    def update_color(self, hex_color: str):
+        self.hex_color = hex_color
+        self.color_label.setStyleSheet(
+            f"background-color: {hex_color}; border: 1px solid #aaa;"
+        )
+        self.hex_label.setText(hex_color.upper())
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.store: ColorStore = ColorStore()
+
+        self.setWindowTitle("DDNet 换色工具")
+        self.resize(500, 400)
+        self.setMinimumSize(400, 300)
+
+        self._setup_ui()
+        self._load_colors()
+
+    def _setup_ui(self):
+        toolbar = QToolBar()
+        toolbar.setMovable(False)
+        self.addToolBar(toolbar)
+
+        add_btn = QPushButton("添加颜色")
+        add_btn.clicked.connect(self.add_color)  # pyright: ignore[reportUnusedCallResult]
+        toolbar.addWidget(add_btn)  # pyright: ignore[reportUnusedCallResult]
+
+        export_btn = QPushButton("导出配置")
+        export_btn.clicked.connect(self.export_config)  # pyright: ignore[reportUnusedCallResult]
+        toolbar.addWidget(export_btn)  # pyright: ignore[reportUnusedCallResult]
+
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        toolbar.addWidget(spacer)  # pyright: ignore[reportUnusedCallResult]
+
+        settings_btn = QPushButton("⚙️ 设置")
+        settings_btn.clicked.connect(self.show_settings)  # pyright: ignore[reportUnusedCallResult]
+        toolbar.addWidget(settings_btn)  # pyright: ignore[reportUnusedCallResult]
+
+        self.list_widget: ColorListWidget = ColorListWidget()
+        self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.list_widget.customContextMenuRequested.connect(self.show_context_menu)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportUnusedCallResult]
+        self.list_widget.itemClicked.connect(self.on_item_clicked)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportUnusedCallResult]
+
+        self.status_bar: QStatusBar = self.statusBar()
+        self.update_status()
+
+        self.setCentralWidget(self.list_widget)
+
+    def _load_colors(self):
+        self.list_widget.clear()
+        for hex_color in self.store.colors:
+            self._add_color_item(hex_color)
+
+    def _add_color_item(self, hex_color: str, index: int = -1):
+        item = QListWidgetItem()
+        widget = ColorItemWidget(hex_color)
+        item.setSizeHint(widget.sizeHint())
+        item.setData(Qt.ItemDataRole.UserRole, hex_color)
+
+        if index >= 0:
+            self.list_widget.insertItem(index, item)
+            self.list_widget.setItemWidget(item, widget)
+        else:
+            self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, widget)
+
+    def add_color(self):
+        color = QColorDialog.getColor(title="选择颜色")
+        if color.isValid():
+            hex_color = color.name().upper()
+            self.store.add_color(hex_color)
+            self._add_color_item(hex_color)
+            self.update_status()
+
+    def show_settings(self):
+        dialog = SettingsDialog(self.store, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.update_status()
+
+    def update_status(self):
+        count = len(self.store.colors)
+        self.status_bar.showMessage(
+            f"绑定键: {self.store.bind_key}  |  输出: {self.store.output_folder}  |  共 {count} 个颜色"
+        )
+
+    def show_context_menu(self, pos: QPoint):
+        item = self.list_widget.itemAt(pos)
+        if not item:
+            return
+
+        index = self.list_widget.row(item)
+        menu = QMenu(self)
+
+        copy_action = QAction("复制", self)
+        copy_action.triggered.connect(lambda: self.copy_color(index))  # pyright: ignore[reportUnusedCallResult]
+        menu.addAction(copy_action)
+
+        modify_action = QAction("修改", self)
+        modify_action.triggered.connect(lambda: self.modify_color(index))  # pyright: ignore[reportUnusedCallResult]
+        menu.addAction(modify_action)
+
+        delete_action = QAction("删除", self)
+        delete_action.triggered.connect(lambda: self.delete_color(index))  # pyright: ignore[reportUnusedCallResult]
+        menu.addAction(delete_action)
+
+        menu.exec(self.list_widget.mapToGlobal(pos))  # pyright: ignore[reportUnusedCallResult]
+
+    def copy_color(self, index: int):
+        if 0 <= index < len(self.store.colors):
+            hex_color = self.store.colors[index]
+            clipboard = QGuiApplication.clipboard()
+            clipboard.setText(hex_color)
+            self.status_bar.showMessage(f"已复制: {hex_color}", 2000)
+
+    def modify_color(self, index: int):
+        if 0 <= index < len(self.store.colors):
+            current_color = self.store.colors[index]
+            color = QColorDialog.getColor(QColor(current_color), self, "修改颜色")
+            if color.isValid():
+                hex_color = color.name().upper()
+                self.store.update_color(index, hex_color)
+
+                item = self.list_widget.item(index)
+                # Method A
+                widget = self.list_widget.itemWidget(item)
+                if isinstance(widget, ColorItemWidget):
+                    widget.update_color(hex_color)
+                else:
+                    raise TypeError(
+                        f"Expected ColorItemWidget, got {type(widget).__name__} " +
+                        f"(value: {widget})"
+                    )
+                # Method B
+                # from typing import cast
+                # widget = cast(ColorItemWidget, self.list_widget.itemWidget(item))
+                # widget.update_color(hex_color)
+                item.setData(Qt.ItemDataRole.UserRole, hex_color)
+
+    def delete_color(self, index: int):
+        if 0 <= index < len(self.store.colors):
+            self.store.remove_color(index)
+            self.list_widget.takeItem(index)  # pyright: ignore[reportUnusedCallResult]
+            self.update_status()
+
+    def on_item_clicked(self, item):
+        pass
+
+    def export_config(self):
+        if not self.store.colors:
+            QMessageBox.warning(self, "警告", "没有颜色可导出")  # pyright: ignore[reportUnusedCallResult]
+            return
+
+        folder = Path(self.store.output_folder)
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+
+            if any(folder.iterdir()):
+                reply = QMessageBox.question(
+                    self,
+                    "确认",
+                    f"目录 '{folder}' 不为空，是否清空？",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    for f in folder.iterdir():
+                        f.unlink()
+                else:
+                    return
+
+            bind_key = self.store.bind_key
+            colors = self.store.colors
+
+            for i, color in enumerate(colors):
+                cfg_file = folder / f"change-color{i}.cfg"
+                next_idx = (i + 1) % len(colors)
+                with open(cfg_file, "w") as f:
+                    f.write(    # pyright: ignore[reportUnusedCallResult]
+                        f"bind {bind_key} exec {folder / f'change-color{next_idx}.cfg'}\n"
+                    )
+                    f.write(f"player_color_body {color}\n")  # pyright: ignore[reportUnusedCallResult]
+                    f.write(f"player_color_feet {color}\n")  # pyright: ignore[reportUnusedCallResult]
+                    f.write(f"dummy_color_body {color}\n")  # pyright: ignore[reportUnusedCallResult]
+                    f.write(f"dummy_color_feet {color}\n")  # pyright: ignore[reportUnusedCallResult]
+
+            QMessageBox.information(  # pyright: ignore[reportUnusedCallResult]
+                self, "成功", f"已导出 {len(colors)} 个配置文件到:\n{folder.absolute()}"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"导出失败: {e}")  # pyright: ignore[reportUnusedCallResult]
+
+    @override
+    def closeEvent(self, event: QCloseEvent):
+        new_order = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            hex_color = item.data(Qt.ItemDataRole.UserRole)  # pyright: ignore[reportAny]
+            new_order.append(hex_color)  # pyright: ignore[reportUnknownMemberType, reportAny]
+
+        if new_order != self.store.colors:
+            self.store.colors = new_order
+            self.store.save()
+        event.accept()
