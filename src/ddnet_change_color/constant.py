@@ -1,8 +1,5 @@
-from pathlib import Path
 import re
 
-CONFIG_DIR = Path.home() / ".ddnet-change-color"
-CONFIG_FILE = CONFIG_DIR / "colors.json"
 PATTERN_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
