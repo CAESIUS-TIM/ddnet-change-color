@@ -51,9 +51,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(buttons)
 
     def choose_folder(self):
-        folder = QFileDialog.getExistingDirectory(
-            self, "选择输出目录", self.store.output_folder
-        )
+        folder = QFileDialog.getExistingDirectory(self, "选择输出目录", self.store.output_folder)
         if folder:
             self.folder_edit.setText(folder)
 
