@@ -1,6 +1,5 @@
 """颜色列表小部件"""
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QAbstractItemView, QListWidget, QWidget
 
 

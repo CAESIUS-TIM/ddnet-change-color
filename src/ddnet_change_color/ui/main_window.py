@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 from typing import override
@@ -11,15 +10,8 @@ from PySide6.QtGui import (
     QGuiApplication,
 )
 from PySide6.QtWidgets import (
-    QAbstractItemView,
     QColorDialog,
     QDialog,
-    QDialogButtonBox,
-    QFileDialog,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QListWidget,
     QListWidgetItem,
     QMainWindow,
     QMenu,
@@ -28,18 +20,16 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QStatusBar,
     QToolBar,
-    QVBoxLayout,
     QWidget,
 )
 
-from ..config import CONFIG_DIR, CONFIG_FILE
-from ..constant import is_valid_color, is_valid_bind_key
-from ..models.color_store import ColorStore
 from ..dialogs.settings_dialog import SettingsDialog
-from ..widgets.color_list import ColorListWidget
+from ..models.color_store import ColorStore
 from ..widgets.color_item import ColorItemWidget
+from ..widgets.color_list import ColorListWidget
 
 logger = logging.getLogger(__name__)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -118,7 +108,8 @@ class MainWindow(QMainWindow):
     def update_status(self):
         count = len(self.store.colors)
         self.status_bar.showMessage(
-            f"绑定键: {self.store.bind_key}  |  输出: {self.store.output_folder}  |  共 {count} 个颜色"
+            f"绑定键: {self.store.bind_key}  |  输出: {self.store.output_folder}  |  "
+            f"共 {count} 个颜色"
         )
 
     def show_context_menu(self, pos: QPoint):
@@ -165,8 +156,8 @@ class MainWindow(QMainWindow):
                     widget.update_color(hex_color)
                 else:
                     raise TypeError(
-                        f"Expected ColorItemWidget, got {type(widget).__name__} " +
-                        f"(value: {widget})"
+                        f"Expected ColorItemWidget, got {type(widget).__name__} "
+                        + f"(value: {widget})"
                     )
                 # Method B
                 # from typing import cast
@@ -212,7 +203,7 @@ class MainWindow(QMainWindow):
                 cfg_file = folder / f"change-color{i}.cfg"
                 next_idx = (i + 1) % len(colors)
                 with open(cfg_file, "w") as f:
-                    f.write(    # pyright: ignore[reportUnusedCallResult]
+                    f.write(  # pyright: ignore[reportUnusedCallResult]
                         f"bind {bind_key} exec {folder / f'change-color{next_idx}.cfg'}\n"
                     )
                     f.write(f"player_color_body {color}\n")  # pyright: ignore[reportUnusedCallResult]
