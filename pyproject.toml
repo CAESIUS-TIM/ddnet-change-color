@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "CAESIUS-TIM", email = "60285058+CAESIUS-TIM@users.noreply.github.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "pyqt6>=6.11.0",
     "pyside6>=6.11.0",
@@ -50,7 +50,7 @@ ignore = []
 per-file-ignores = { "__init__.py" = ["F401"] }  # allow unused imports in __init__.py
 
 [tool.pyright]
-pythonVersion = "3.14"
+pythonVersion = "3.12"
 typeCheckingMode = "basic"
 include = ["src"]
 exclude = ["**/__pycache__", "**/.pytest_cache", "**/.venv"]
