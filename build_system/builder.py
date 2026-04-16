@@ -323,14 +323,36 @@ class Builder:
             for path in self.build_config.get("pathex", []):
                 args.extend(["--paths", path])
 
-        # UPX 配置 (在 spec 模式下也允许)
-        if self.build_config.get("upx", True):
-            args.append("--upx-dir")
-            args.append(str(PROJECT_ROOT / "tools" / "upx"))  # 假设 UPX 在此目录
+        # UPX 配置 (在 spec 模式下不被允许，需要从 args 中移除已有的 UPX 排除项)
+        if include_main_script:
+            # 只有在非 spec 模式下才添加 UPX 配置
+            if self.build_config.get("upx", True):
+                args.append("--upx-dir")
+                args.append(str(PROJECT_ROOT / "tools" / "upx"))  # 假设 UPX 在此目录
 
-        # UPX 排除列表 (在 spec 模式下也允许)
-        for exclude in self.config.get("upx_exclude", []):
-            args.append(f"--upx-exclude={exclude}")
+            # UPX 排除列表
+            for exclude in self.config.get("upx_exclude", []):
+                args.append(f"--upx-exclude={exclude}")
+        else:
+            # 在 spec 模式下，移除可能由 get_pyinstaller_args 添加的不被允许的参数
+            # 例如 "--upx-exclude=vcruntime140.dll", "--onefile", "--windowed"
+            filtered_args = []
+            i = 0
+            while i < len(args):
+                arg = args[i]
+                if arg.startswith("--upx-exclude="):
+                    # 跳过 UPX 排除项
+                    i += 1
+                elif arg in ("--onefile", "--windowed"):
+                    # 跳过 makespec 选项
+                    i += 1
+                elif arg == "--upx-dir":
+                    # 跳过 --upx-dir 及其参数
+                    i += 2  # 跳过 --upx-dir 和下一个参数
+                else:
+                    filtered_args.append(arg)
+                    i += 1
+            args = filtered_args
 
         return args
 
