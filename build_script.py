@@ -14,10 +14,19 @@ DDNet Change Color 构建脚本
 
 import argparse
 import sys
+import os
 from pathlib import Path
 
 # 添加 build 模块到路径
-sys.path.insert(0, str(Path(__file__).parent))
+script_dir = str(Path(__file__).parent)
+sys.path.insert(0, script_dir)
+print(f"DEBUG: Script directory: {script_dir}", file=sys.stderr)
+print(f"DEBUG: Current working directory: {os.getcwd()}", file=sys.stderr)
+print(f"DEBUG: sys.path: {sys.path}", file=sys.stderr)
+print(
+    f"DEBUG: Checking if build directory exists: {os.path.isdir(os.path.join(script_dir, 'build'))}",
+    file=sys.stderr,
+)
 
 from build.builder import build_all_platforms, build_for_platform
 from build.config import PLATFORM_CONFIG
