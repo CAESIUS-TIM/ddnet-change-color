@@ -5,7 +5,13 @@ import os
 from pathlib import Path
 
 # 项目根目录
-project_root = Path(spec_file).parent
+# specfile 是 PyInstaller 注入的变量
+try:
+    project_root = Path(specfile).parent
+except NameError:
+    # 回退到当前工作目录
+    import os
+    project_root = Path(os.getcwd())
 src_dir = project_root / "src"
 
 # 添加源代码路径
