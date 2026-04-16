@@ -55,7 +55,7 @@ jobs:
     
     - name: Generate Windows icons
       run: |
-        uv run python generate_icons.py --platform windows
+        $env:PYTHONIOENCODING='utf-8'; uv run python generate_icons.py --platform windows
         if (-not (Test-Path "assets/windows/icon.ico")) {
           Write-Host "Creating placeholder ICO file"
           # Minimal valid ICO file (16x16 1bpp)
@@ -80,7 +80,7 @@ jobs:
     
     - name: Build Windows executable
       run: |
-        uv run python build_script.py --platform windows --clean
+        uv run python build_script.py --platform windows --no-onefile --clean
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Build failed"
           exit 1
@@ -149,7 +149,7 @@ jobs:
     
     - name: Build macOS application
       run: |
-        uv run python build_script.py --platform darwin --clean
+        uv run python build_script.py --platform darwin --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed"
           exit 1
@@ -242,7 +242,7 @@ jobs:
     
     - name: Build Linux executable
       run: |
-        uv run python build_script.py --platform linux --clean
+        uv run python build_script.py --platform linux --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed"
           exit 1

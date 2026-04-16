@@ -98,7 +98,7 @@ jobs:
     
     - name: Generate icons (Windows)
       run: |
-        uv run python generate_icons.py --platform windows
+        $env:PYTHONIOENCODING='utf-8'; uv run python generate_icons.py --platform windows
         if (-not (Test-Path "assets/windows/icon.ico")) {
           Write-Host "Warning: Windows icon not generated, creating placeholder"
           New-Item -ItemType Directory -Force -Path "assets/windows"
