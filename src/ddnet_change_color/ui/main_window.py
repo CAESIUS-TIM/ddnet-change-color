@@ -171,7 +171,7 @@ class MainWindow(QMainWindow):
             self.list_widget.takeItem(index)  # pyright: ignore[reportUnusedCallResult]
             self.update_status()
 
-    def on_item_clicked(self, item):
+    def on_item_clicked(self, item: QListWidgetItem) -> None:
         pass
 
     def export_config(self):
