@@ -98,7 +98,7 @@ jobs:
     
     - name: Generate icons (Windows)
       run: |
-        python generate_icons.py --platform windows
+        uv run python generate_icons.py --platform windows
         if (-not (Test-Path "assets/windows/icon.ico")) {
           Write-Host "Warning: Windows icon not generated, creating placeholder"
           New-Item -ItemType Directory -Force -Path "assets/windows"
@@ -138,7 +138,7 @@ jobs:
       run: uv sync --dev --group build
     
     - name: Generate icons (macOS)
-      run: python generate_icons.py --platform macos
+      run: uv run python generate_icons.py --platform macos
     
     - name: Validate macOS build environment
       run: QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform darwin --validate
@@ -177,7 +177,7 @@ jobs:
       run: uv sync --dev --group build
     
     - name: Generate icons (Linux)
-      run: python generate_icons.py --platform linux
+      run: uv run python generate_icons.py --platform linux
     
     - name: Validate Linux build environment
       run: QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform linux --validate

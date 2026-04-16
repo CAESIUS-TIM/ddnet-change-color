@@ -55,7 +55,7 @@ jobs:
     
     - name: Generate Windows icons
       run: |
-        python generate_icons.py --platform windows
+        uv run python generate_icons.py --platform windows
         if (-not (Test-Path "assets/windows/icon.ico")) {
           Write-Host "Creating placeholder ICO file"
           # Minimal valid ICO file (16x16 1bpp)
@@ -140,7 +140,7 @@ jobs:
       run: uv sync --group build
     
     - name: Generate macOS icons
-      run: python generate_icons.py --platform macos
+      run: uv run python generate_icons.py --platform macos
     
     - name: Update Info.plist version
       run: |
@@ -233,7 +233,7 @@ jobs:
       run: uv sync --group build
     
     - name: Generate Linux icons
-      run: python generate_icons.py --platform linux
+      run: uv run python generate_icons.py --platform linux
     
     - name: Update .desktop file version
       run: |
