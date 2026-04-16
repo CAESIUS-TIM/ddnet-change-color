@@ -51,7 +51,7 @@ jobs:
       run: uv python install 3.14
     
     - name: Install build dependencies
-      run: uv sync --group build
+      run: uv sync --dev --group build
     
     - name: Generate Windows icons
       run: |
@@ -80,7 +80,7 @@ jobs:
     
     - name: Build Windows executable
       run: |
-        uv run python build_script.py --platform windows --no-onefile --clean
+        $env:PYTHONIOENCODING='utf-8'; uv run python build_script.py --platform windows --no-onefile --clean
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Build failed"
           exit 1
@@ -137,7 +137,7 @@ jobs:
       run: uv python install 3.14
     
     - name: Install build dependencies
-      run: uv sync --group build
+      run: uv sync --dev --group build
     
     - name: Generate macOS icons
       run: uv run python generate_icons.py --platform macos
@@ -230,7 +230,7 @@ jobs:
           upx
     
     - name: Install build dependencies
-      run: uv sync --group build
+      run: uv sync --dev --group build
     
     - name: Generate Linux icons
       run: uv run python generate_icons.py --platform linux
