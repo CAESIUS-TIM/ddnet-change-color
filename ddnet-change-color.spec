@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 # 项目根目录
-project_root = Path(__file__).parent
+project_root = Path(spec_file).parent
 src_dir = project_root / "src"
 
 # 添加源代码路径
