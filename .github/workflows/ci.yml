@@ -51,7 +51,7 @@ jobs:
           libxcb-cursor0
     
     - name: Install dependencies
-      run: uv sync --dev
+      run: uv sync --dev --group build
     
     - name: Run linting
       run: uv run ruff check .
@@ -70,7 +70,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         fail_ci_if_error: false
     
     - name: Build verification
@@ -225,11 +225,11 @@ jobs:
           libxcb-xkb1 \
           libxcb-xv0 \
           libfontconfig1 \
-          libfreetype6 \
+           libfreetype6 \
           libxcb-cursor0
-     
+      
     - name: Install dependencies
-      run: uv sync --dev
+      run: uv sync --dev --group build
     
     - name: Check minimum coverage
       run: |
