@@ -98,18 +98,18 @@ src/ddnet_change_color/
 uv sync --group build
 
 # 为当前平台构建单文件可执行程序
-python build.py
+python build_script.py
 
 # 为指定平台构建
-python build.py --platform windows
-python build.py --platform linux
-python build.py --platform darwin
+python build_script.py --platform windows
+python build_script.py --platform linux
+python build_script.py --platform darwin
 
 # 验证构建环境
-python build.py --validate
+python build_script.py --validate
 
 # 清理构建目录
-python build.py --clean
+python build_script.py --clean
 ```
 
 ### 发布流程
@@ -129,10 +129,10 @@ python build.py --clean
 3. **手动构建（高级）**
    ```bash
    # 为所有平台构建
-   python build.py --all
+   python build_script.py --all
    
    # 使用目录模式（开发）
-   python build.py --no-onefile
+   python build_script.py --no-onefile
    ```
 
 ### 平台支持
@@ -151,4 +151,4 @@ MIT License
 ## 相关链接
 
 - [DDNet 官网](https://ddnet.org/)
-- [DDNet 客户端配置文档](https://github.com/ddnet/ddnet#configuration)
+- [DDNet 客户端配置文档](https://github.com/ddnet/ddnet#configuration) 

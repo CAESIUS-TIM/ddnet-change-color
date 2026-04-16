@@ -2,10 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]
     tags-ignore: [ 'v*' ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -22,12 +23,32 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Install uv
-      uses: astral-sh/uv-action@v2
-      with:
-        version: "0.5.0"
+      uses: astral-sh/setup-uv@v8.0.0
     
     - name: Set up Python ${{ matrix.python-version }}
       run: uv python install ${{ matrix.python-version }}
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          xvfb \
+          libegl1 \
+          libgl1 \
+          libxcb-xinerama0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-shape0 \
+          libxcb-sync1 \
+          libxcb-xfixes0 \
+          libxcb-xkb1 \
+          libxcb-xv0 \
+          libfontconfig1 \
+          libfreetype6 \
+          libxcb-cursor0
     
     - name: Install dependencies
       run: uv sync --dev
@@ -42,7 +63,9 @@ jobs:
       run: uv run pyright
     
     - name: Run tests with coverage
-      run: uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
+      run: |
+        export QT_QPA_PLATFORM=offscreen
+        xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -52,8 +75,8 @@ jobs:
     
     - name: Build verification
       run: |
-        uv run python build.py --validate
-        uv run python -m ddnet_change_color --help
+        uv run python build_script.py --validate
+        QT_QPA_PLATFORM=offscreen uv run python -m ddnet_change_color --help
 
   windows-build-test:
     name: Windows Build Test
@@ -65,9 +88,7 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Install uv
-      uses: astral-sh/uv-action@v2
-      with:
-        version: "0.5.0"
+      uses: astral-sh/setup-uv@v8.0.0
     
     - name: Set up Python
       run: uv python install 3.14
@@ -87,11 +108,12 @@ jobs:
         }
     
     - name: Validate Windows build environment
-      run: uv run python build.py --platform windows --validate
+      run: $env:QT_QPA_PLATFORM="offscreen"; uv run python build_script.py --platform windows --validate
     
     - name: Test Windows build (directory mode)
       run: |
-        uv run python build.py --platform windows --no-onefile --clean
+        $env:QT_QPA_PLATFORM="offscreen"
+        uv run python build_script.py --platform windows --no-onefile --clean
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Build failed, checking logs"
           exit 1
@@ -107,9 +129,7 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Install uv
-      uses: astral-sh/uv-action@v2
-      with:
-        version: "0.5.0"
+      uses: astral-sh/setup-uv@v8.0.0
     
     - name: Set up Python
       run: uv python install 3.14
@@ -121,11 +141,11 @@ jobs:
       run: python generate_icons.py --platform macos
     
     - name: Validate macOS build environment
-      run: uv run python build.py --platform darwin --validate
+      run: QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform darwin --validate
     
     - name: Test macOS build (directory mode)
       run: |
-        uv run python build.py --platform darwin --no-onefile --clean
+        QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform darwin --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed, checking logs"
           exit 1
@@ -141,9 +161,7 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Install uv
-      uses: astral-sh/uv-action@v2
-      with:
-        version: "0.5.0"
+      uses: astral-sh/setup-uv@v8.0.0
     
     - name: Set up Python
       run: uv python install 3.14
@@ -151,7 +169,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 libxcb-xfixes0 libxcb-xkb1 libxcb-xv0 libfontconfig1 libfreetype6 libgl1-mesa-glx libxcb-cursor0
+        sudo apt-get install -y libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 libxcb-xfixes0 libxcb-xkb1 libxcb-xv0 libfontconfig1 libfreetype6 libgl1 libxcb-cursor0
         # UPX for compression
         sudo apt-get install -y upx
     
@@ -162,11 +180,11 @@ jobs:
       run: python generate_icons.py --platform linux
     
     - name: Validate Linux build environment
-      run: uv run python build.py --platform linux --validate
+      run: QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform linux --validate
     
     - name: Test Linux build (directory mode)
       run: |
-        uv run python build.py --platform linux --no-onefile --clean
+        QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform linux --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed, checking logs"
           exit 1
@@ -182,22 +200,67 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Install uv
-      uses: astral-sh/uv-action@v2
-    
+      uses: astral-sh/setup-uv@v8.0.0
+     
     - name: Set up Python
       run: uv python install 3.14
-    
+     
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          xvfb \
+          bc \
+          libegl1 \
+          libgl1 \
+          libxcb-xinerama0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-shape0 \
+          libxcb-sync1 \
+          libxcb-xfixes0 \
+          libxcb-xkb1 \
+          libxcb-xv0 \
+          libfontconfig1 \
+          libfreetype6 \
+          libxcb-cursor0
+     
     - name: Install dependencies
       run: uv sync --dev
     
     - name: Check minimum coverage
       run: |
-        coverage=$(uv run pytest --cov=ddnet_change_color --cov-report=term | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
-        echo "Coverage: ${coverage}%"
-        if (( $(echo "$coverage < 94" | bc -l) )); then
-          echo "Error: Coverage below 94%"
+        set -e
+        export QT_QPA_PLATFORM=offscreen
+        echo "Running tests with QT_QPA_PLATFORM=$QT_QPA_PLATFORM..."
+        coverage_output=$(xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=term 2>&1 && echo "TESTS_PASSED" || echo "TESTS_FAILED")
+        echo "Test output:"
+        echo "$coverage_output"
+        
+        if echo "$coverage_output" | grep -q "TESTS_FAILED"; then
+          echo "Error: Tests failed to run"
           exit 1
         fi
+        
+        coverage=$(echo "$coverage_output" | grep "TOTAL" | awk '{print $4}' | sed 's/%//' || echo "0")
+        echo "Coverage: ${coverage}%"
+        
+        if [ -z "$coverage" ] || [ "$coverage" = "0" ]; then
+          echo "Error: Failed to extract coverage from output"
+          echo "Full output was:"
+          echo "$coverage_output"
+          exit 1
+        fi
+        
+        if [ "$coverage" -lt 94 ]; then
+          echo "Error: Coverage ${coverage}% is below required 94%"
+          exit 1
+        fi
+        
+        echo "✅ Coverage check passed: ${coverage}% (minimum: 94%)"
     
     - name: All checks passed
       run: echo "✅ All quality checks passed"

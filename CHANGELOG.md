@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 多平台单文件可执行程序打包支持 (Windows, macOS, Linux)
 - 自动化 GitHub Releases 发布流程
 - 构建系统模块 (`build/`) 包含平台特定配置
-- 命令行构建工具 (`build.py`)
+- 命令行构建工具 (`build_script.py`)
 - GitHub Actions 工作流 (`ci.yml`, `release.yml`)
 - 图标资源和桌面集成文件
 - Windows 版本信息文件
