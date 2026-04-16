@@ -62,7 +62,9 @@ jobs:
       run: uv run pyright
     
     - name: Run tests with coverage
-      run: xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
+      run: |
+        export QT_QPA_PLATFORM=offscreen
+        xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -230,12 +232,34 @@ jobs:
     
     - name: Check minimum coverage
       run: |
-        coverage=$(xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=term | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
-        echo "Coverage: ${coverage}%"
-        if [ "$coverage" -lt 94 ]; then
-          echo "Error: Coverage below 94%"
+        set -e
+        export QT_QPA_PLATFORM=offscreen
+        echo "Running tests with QT_QPA_PLATFORM=$QT_QPA_PLATFORM..."
+        coverage_output=$(xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=term 2>&1 && echo "TESTS_PASSED" || echo "TESTS_FAILED")
+        echo "Test output:"
+        echo "$coverage_output"
+        
+        if echo "$coverage_output" | grep -q "TESTS_FAILED"; then
+          echo "Error: Tests failed to run"
           exit 1
         fi
+        
+        coverage=$(echo "$coverage_output" | grep "TOTAL" | awk '{print $4}' | sed 's/%//' || echo "0")
+        echo "Coverage: ${coverage}%"
+        
+        if [ -z "$coverage" ] || [ "$coverage" = "0" ]; then
+          echo "Error: Failed to extract coverage from output"
+          echo "Full output was:"
+          echo "$coverage_output"
+          exit 1
+        fi
+        
+        if [ "$coverage" -lt 94 ]; then
+          echo "Error: Coverage ${coverage}% is below required 94%"
+          exit 1
+        fi
+        
+        echo "✅ Coverage check passed: ${coverage}% (minimum: 94%)"
     
     - name: All checks passed
       run: echo "✅ All quality checks passed"
