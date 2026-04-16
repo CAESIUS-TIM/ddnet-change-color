@@ -27,6 +27,27 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: uv python install ${{ matrix.python-version }}
     
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libegl1-mesa \
+          libgl1-mesa-glx \
+          libxcb-xinerama0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-shape0 \
+          libxcb-sync1 \
+          libxcb-xfixes0 \
+          libxcb-xkb1 \
+          libxcb-xv0 \
+          libfontconfig1 \
+          libfreetype6 \
+          libxcb-cursor0
+    
     - name: Install dependencies
       run: uv sync --dev
     
@@ -40,7 +61,7 @@ jobs:
       run: uv run pyright
     
     - name: Run tests with coverage
-      run: uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
+      run: QT_QPA_PLATFORM=offscreen uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -51,7 +72,7 @@ jobs:
     - name: Build verification
       run: |
         uv run python build.py --validate
-        uv run python -m ddnet_change_color --help
+        QT_QPA_PLATFORM=offscreen uv run python -m ddnet_change_color --help
 
   windows-build-test:
     name: Windows Build Test
@@ -83,10 +104,11 @@ jobs:
         }
     
     - name: Validate Windows build environment
-      run: uv run python build.py --platform windows --validate
+      run: $env:QT_QPA_PLATFORM="offscreen"; uv run python build.py --platform windows --validate
     
     - name: Test Windows build (directory mode)
       run: |
+        $env:QT_QPA_PLATFORM="offscreen"
         uv run python build.py --platform windows --no-onefile --clean
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Build failed, checking logs"
@@ -115,11 +137,11 @@ jobs:
       run: python generate_icons.py --platform macos
     
     - name: Validate macOS build environment
-      run: uv run python build.py --platform darwin --validate
+      run: QT_QPA_PLATFORM=offscreen uv run python build.py --platform darwin --validate
     
     - name: Test macOS build (directory mode)
       run: |
-        uv run python build.py --platform darwin --no-onefile --clean
+        QT_QPA_PLATFORM=offscreen uv run python build.py --platform darwin --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed, checking logs"
           exit 1
@@ -154,11 +176,11 @@ jobs:
       run: python generate_icons.py --platform linux
     
     - name: Validate Linux build environment
-      run: uv run python build.py --platform linux --validate
+      run: QT_QPA_PLATFORM=offscreen uv run python build.py --platform linux --validate
     
     - name: Test Linux build (directory mode)
       run: |
-        uv run python build.py --platform linux --no-onefile --clean
+        QT_QPA_PLATFORM=offscreen uv run python build.py --platform linux --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed, checking logs"
           exit 1
@@ -179,12 +201,33 @@ jobs:
     - name: Set up Python
       run: uv python install 3.14
     
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libegl1-mesa \
+          libgl1-mesa-glx \
+          libxcb-xinerama0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-shape0 \
+          libxcb-sync1 \
+          libxcb-xfixes0 \
+          libxcb-xkb1 \
+          libxcb-xv0 \
+          libfontconfig1 \
+          libfreetype6 \
+          libxcb-cursor0
+    
     - name: Install dependencies
       run: uv sync --dev
     
     - name: Check minimum coverage
       run: |
-        coverage=$(uv run pytest --cov=ddnet_change_color --cov-report=term | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
+        coverage=$(QT_QPA_PLATFORM=offscreen uv run pytest --cov=ddnet_change_color --cov-report=term | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
         echo "Coverage: ${coverage}%"
         if (( $(echo "$coverage < 94" | bc -l) )); then
           echo "Error: Coverage below 94%"

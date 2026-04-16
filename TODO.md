@@ -116,10 +116,79 @@
 - 改进错误处理和用户反馈
 - 添加性能分析工具
 
+## 🔧 CI/CD 环境问题 (高优先级)
+
+### 问题描述
+GitHub Actions CI 环境中缺少桌面环境，导致 PySide6 测试失败：
+```
+ImportError: libEGL.so.1: cannot open shared object file: No such file or directory
+```
+
+### 解决方案调研
+
+#### 方案1: 安装必要的图形库依赖
+```yaml
+# 在 CI 工作流中添加系统包安装
+- name: Install graphics dependencies
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y \
+      libegl1-mesa \
+      libgl1-mesa-glx \
+      libxcb-xinerama0 \
+      libxcb-icccm4 \
+      libxcb-image0 \
+      libxcb-keysyms1 \
+      libxcb-randr0 \
+      libxcb-render-util0 \
+      libxcb-shape0 \
+      libxcb-sync1 \
+      libxcb-xfixes0 \
+      libxcb-xkb1 \
+      libxcb-xv0 \
+      libfontconfig1 \
+      libfreetype6
+```
+
+#### 方案2: 使用虚拟显示 (Xvfb)
+```yaml
+- name: Install Xvfb
+  run: sudo apt-get install -y xvfb
+
+- name: Run tests with Xvfb
+  run: xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest tests/
+```
+
+#### 方案3: 使用 Qt 离屏渲染模式
+```bash
+# 设置环境变量
+export QT_QPA_PLATFORM=offscreen
+# 或
+export QT_QPA_PLATFORM=minimal
+```
+
+#### 推荐方案
+结合所有三种方案：
+1. 安装图形库和 Xvfb
+2. 设置 `QT_QPA_PLATFORM=offscreen` 或使用 Xvfb
+3. 对于需要实际显示的测试，使用 Xvfb
+
+#### 测试策略调整
+- 将 GUI 测试与无 GUI 测试分离
+- 对于需要实际显示的测试，仅在本地运行或在有 GUI 的环境中运行
+- 在 CI 中主要运行单元测试和集成测试
+
+### 实施步骤
+1. 更新 `.github/workflows/ci.yml` 中的测试步骤
+2. 添加图形库依赖安装
+3. 配置适当的 Qt 平台
+4. 测试验证
+
 ## 📊 进度跟踪
 
 | 功能 | 状态 | 预计完成 | 备注 |
 |------|------|----------|------|
+| **CI/CD 环境修复** | **进行中** | **2025-04-16** | 解决 GUI 测试在无头环境中的问题 |
 | 颜色预设管理 | 规划中 | Q2 2025 | |
 | 更多颜色格式支持 | 规划中 | Q2 2025 | |
 | 导入/导出增强 | 规划中 | Q3 2025 | |
