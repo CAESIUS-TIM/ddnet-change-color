@@ -75,7 +75,7 @@ jobs:
     
     - name: Build verification
       run: |
-        uv run python build_script.py --validate
+        timeout 60 uv run python build_script.py --validate
         QT_QPA_PLATFORM=offscreen uv run python -m ddnet_change_color --help
 
   windows-build-test:
