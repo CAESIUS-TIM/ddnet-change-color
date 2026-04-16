@@ -151,4 +151,4 @@ MIT License
 ## 相关链接
 
 - [DDNet 官网](https://ddnet.org/)
-- [DDNet 客户端配置文档](https://github.com/ddnet/ddnet#configuration)
+- [DDNet 客户端配置文档](https://github.com/ddnet/ddnet#configuration) 
