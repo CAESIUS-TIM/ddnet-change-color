@@ -59,7 +59,7 @@ jobs:
     
     - name: Build Windows executable
       run: |
-        uv run python build.py --platform windows --clean
+        uv run python build_script.py --platform windows --clean
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Build failed"
           exit 1
@@ -127,7 +127,7 @@ jobs:
     
     - name: Build macOS application
       run: |
-        uv run python build.py --platform darwin --clean
+        uv run python build_script.py --platform darwin --clean
         if [ $? -ne 0 ]; then
           echo "Build failed"
           exit 1
@@ -219,7 +219,7 @@ jobs:
     
     - name: Build Linux executable
       run: |
-        uv run python build.py --platform linux --clean
+        uv run python build_script.py --platform linux --clean
         if [ $? -ne 0 ]; then
           echo "Build failed"
           exit 1

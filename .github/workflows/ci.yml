@@ -74,7 +74,7 @@ jobs:
     
     - name: Build verification
       run: |
-        uv run python build.py --validate
+        uv run python build_script.py --validate
         QT_QPA_PLATFORM=offscreen uv run python -m ddnet_change_color --help
 
   windows-build-test:
@@ -107,12 +107,12 @@ jobs:
         }
     
     - name: Validate Windows build environment
-      run: $env:QT_QPA_PLATFORM="offscreen"; uv run python build.py --platform windows --validate
+      run: $env:QT_QPA_PLATFORM="offscreen"; uv run python build_script.py --platform windows --validate
     
     - name: Test Windows build (directory mode)
       run: |
         $env:QT_QPA_PLATFORM="offscreen"
-        uv run python build.py --platform windows --no-onefile --clean
+        uv run python build_script.py --platform windows --no-onefile --clean
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Build failed, checking logs"
           exit 1
@@ -140,11 +140,11 @@ jobs:
       run: python generate_icons.py --platform macos
     
     - name: Validate macOS build environment
-      run: QT_QPA_PLATFORM=offscreen uv run python build.py --platform darwin --validate
+      run: QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform darwin --validate
     
     - name: Test macOS build (directory mode)
       run: |
-        QT_QPA_PLATFORM=offscreen uv run python build.py --platform darwin --no-onefile --clean
+        QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform darwin --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed, checking logs"
           exit 1
@@ -179,11 +179,11 @@ jobs:
       run: python generate_icons.py --platform linux
     
     - name: Validate Linux build environment
-      run: QT_QPA_PLATFORM=offscreen uv run python build.py --platform linux --validate
+      run: QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform linux --validate
     
     - name: Test Linux build (directory mode)
       run: |
-        QT_QPA_PLATFORM=offscreen uv run python build.py --platform linux --no-onefile --clean
+        QT_QPA_PLATFORM=offscreen uv run python build_script.py --platform linux --no-onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed, checking logs"
           exit 1
