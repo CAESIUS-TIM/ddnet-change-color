@@ -118,7 +118,7 @@ def main():
 
         logging.basicConfig(level=logging.INFO)
 
-    # 清理构建目录
+    # 清理构建目录（如果需要）
     if args.clean:
         import shutil
 
@@ -137,7 +137,10 @@ def main():
             print(f"删除: {dist_dir}")
 
         print("清理完成")
-        return 0
+
+        # 如果没有其他操作（构建、验证等），则退出
+        if not (args.validate or args.all or args.platform):
+            return 0
 
     # 验证模式
     if args.validate:
