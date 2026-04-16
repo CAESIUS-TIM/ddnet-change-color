@@ -254,12 +254,15 @@ class Builder:
         if not self.prepare_build():
             return False
 
+        # 检查是否使用 spec 文件
+        spec_file = self.build_config.get("spec_file")
+        use_spec = Path(spec_file).exists()
+
         # 生成 PyInstaller 参数
-        args = self._generate_pyinstaller_args()
+        args = self._generate_pyinstaller_args(include_main_script=not use_spec)
 
         # 运行 PyInstaller
-        spec_file = self.build_config.get("spec_file")
-        if Path(spec_file).exists():
+        if use_spec:
             print(f"使用 spec 文件: {spec_file}")
             success = run_pyinstaller(args, spec_file)
         else:
@@ -273,12 +276,17 @@ class Builder:
 
         return success
 
-    def _generate_pyinstaller_args(self) -> list:
-        """生成 PyInstaller 参数"""
+    def _generate_pyinstaller_args(self, include_main_script: bool = True) -> list:
+        """生成 PyInstaller 参数
+
+        参数:
+            include_main_script: 是否包含主脚本 (当使用 spec 文件时应为 False)
+        """
         args = get_pyinstaller_args(self.config, self.onefile)
 
-        # 主脚本
-        args.append(self.build_config["main_script"])
+        # 主脚本 (仅当不使用 spec 文件时添加)
+        if include_main_script:
+            args.append(self.build_config["main_script"])
 
         # 工作目录
         args.extend(["--workpath", self.build_config["build_dir"]])
