@@ -13,8 +13,8 @@ DDNet Change Color 构建脚本
 """
 
 import argparse
-import sys
 import os
+import sys
 from pathlib import Path
 
 # 添加 build 模块到路径
