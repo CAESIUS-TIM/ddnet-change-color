@@ -31,8 +31,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          xvfb \
           libegl1 \
-          libgl1-mesa-glx \
+          libgl1 \
           libxcb-xinerama0 \
           libxcb-icccm4 \
           libxcb-image0 \
@@ -61,7 +62,7 @@ jobs:
       run: uv run pyright
     
     - name: Run tests with coverage
-      run: QT_QPA_PLATFORM=offscreen uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
+      run: xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -165,7 +166,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 libxcb-xfixes0 libxcb-xkb1 libxcb-xv0 libfontconfig1 libfreetype6 libgl1-mesa-glx libxcb-cursor0
+        sudo apt-get install -y libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 libxcb-xfixes0 libxcb-xkb1 libxcb-xv0 libfontconfig1 libfreetype6 libgl1 libxcb-cursor0
         # UPX for compression
         sudo apt-get install -y upx
     
@@ -205,8 +206,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          xvfb \
           libegl1 \
-          libgl1-mesa-glx \
+          libgl1 \
           libxcb-xinerama0 \
           libxcb-icccm4 \
           libxcb-image0 \
@@ -227,7 +229,7 @@ jobs:
     
     - name: Check minimum coverage
       run: |
-        coverage=$(QT_QPA_PLATFORM=offscreen uv run pytest --cov=ddnet_change_color --cov-report=term | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
+        coverage=$(xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" uv run pytest --cov=ddnet_change_color --cov-report=term | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
         echo "Coverage: ${coverage}%"
         if (( $(echo "$coverage < 94" | bc -l) )); then
           echo "Error: Coverage below 94%"
