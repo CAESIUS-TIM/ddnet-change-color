@@ -288,42 +288,47 @@ class Builder:
         if include_main_script:
             args.append(self.build_config["main_script"])
 
-        # 工作目录
+        # 工作目录和输出目录 (始终添加，这些参数在 spec 模式下也允许)
         args.extend(["--workpath", self.build_config["build_dir"]])
         args.extend(["--distpath", self.build_config["dist_dir"]])
-        args.extend(["--specpath", str(PROJECT_ROOT)])
 
-        # 隐藏导入
-        for imp in self.build_config.get("hidden_imports", []):
-            args.extend(["--hidden-import", imp])
+        # specpath 仅在非 spec 模式下添加
+        if include_main_script:
+            args.extend(["--specpath", str(PROJECT_ROOT)])
 
-        # 平台特定隐藏导入
-        for imp in self.config.get("hidden_imports", []):
-            args.extend(["--hidden-import", imp])
+        # 以下参数在 spec 模式下不被允许
+        if include_main_script:
+            # 隐藏导入
+            for imp in self.build_config.get("hidden_imports", []):
+                args.extend(["--hidden-import", imp])
 
-        # 排除模块
-        for exc in self.build_config.get("excludes", []):
-            args.extend(["--exclude-module", exc])
+            # 平台特定隐藏导入
+            for imp in self.config.get("hidden_imports", []):
+                args.extend(["--hidden-import", imp])
 
-        # 平台特定排除模块
-        for exc in self.config.get("excludes", []):
-            args.extend(["--exclude-module", exc])
+            # 排除模块
+            for exc in self.build_config.get("excludes", []):
+                args.extend(["--exclude-module", exc])
 
-        # 添加数据文件
-        data_files = collect_data_files()
-        for src, dst in data_files:
-            args.extend(["--add-data", f"{src}:{dst}"])
+            # 平台特定排除模块
+            for exc in self.config.get("excludes", []):
+                args.extend(["--exclude-module", exc])
 
-        # 添加源代码路径
-        for path in self.build_config.get("pathex", []):
-            args.extend(["--paths", path])
+            # 添加数据文件
+            data_files = collect_data_files()
+            for src, dst in data_files:
+                args.extend(["--add-data", f"{src}:{dst}"])
 
-        # UPX 配置
+            # 添加源代码路径
+            for path in self.build_config.get("pathex", []):
+                args.extend(["--paths", path])
+
+        # UPX 配置 (在 spec 模式下也允许)
         if self.build_config.get("upx", True):
             args.append("--upx-dir")
             args.append(str(PROJECT_ROOT / "tools" / "upx"))  # 假设 UPX 在此目录
 
-        # UPX 排除列表
+        # UPX 排除列表 (在 spec 模式下也允许)
         for exclude in self.config.get("upx_exclude", []):
             args.append(f"--upx-exclude={exclude}")
 
