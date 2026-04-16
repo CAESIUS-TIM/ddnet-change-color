@@ -3,24 +3,37 @@
 DDNet Change Color 构建脚本
 
 使用:
-    python build.py [选项]
+    python build_script.py [选项]
 
 示例:
-    python build.py                  # 为当前平台构建
-    python build.py --platform windows  # 为 Windows 构建
-    python build.py --all           # 为所有平台构建
-    python build.py --help          # 显示帮助
+    python build_script.py                  # 为当前平台构建
+    python build_script.py --platform windows  # 为 Windows 构建
+    python build_script.py --all           # 为所有平台构建
+    python build_script.py --help          # 显示帮助
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 # 添加 build 模块到路径
-sys.path.insert(0, str(Path(__file__).parent))
+script_dir = str(Path(__file__).parent)
+sys.path.insert(0, script_dir)
 
-from build.builder import build_all_platforms, build_for_platform
-from build.config import PLATFORM_CONFIG
+try:
+    from build.builder import build_all_platforms, build_for_platform
+    from build.config import PLATFORM_CONFIG
+except ImportError as e:
+    print(f"ERROR: Failed to import build module: {e}", file=sys.stderr)
+    print(f"DEBUG: Script directory: {script_dir}", file=sys.stderr)
+    print(f"DEBUG: Current working directory: {os.getcwd()}", file=sys.stderr)
+    print(f"DEBUG: sys.path: {sys.path}", file=sys.stderr)
+    print(
+        f"DEBUG: Build dir exists: {os.path.isdir(os.path.join(script_dir, 'build'))}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def main():
