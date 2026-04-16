@@ -5,9 +5,30 @@ on:
     tags: [ 'v*' ]
 
 jobs:
+  validate-tag:
+    name: Validate tag is on main branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check if tag is on main branch
+        id: check
+        run: |
+          TAG="${{ github.ref_name }}"
+          if git branch -a --contains "$TAG" | grep -q -E '(^|\s)main$|origin/main'; then
+            echo "Tag $TAG is on main branch"
+          else
+            echo "Error: Tag $TAG is not on main branch"
+            exit 1
+          fi
+
   build-windows:
     name: Build Windows
     runs-on: windows-latest
+    needs: [validate-tag]
     
     steps:
     - name: Checkout repository
@@ -93,6 +114,7 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
+    needs: [validate-tag]
     
     steps:
     - name: Checkout repository
@@ -164,6 +186,7 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
+    needs: [validate-tag]
     
     steps:
     - name: Checkout repository
