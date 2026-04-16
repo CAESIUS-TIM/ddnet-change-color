@@ -2,7 +2,6 @@
 构建配置常量
 """
 
-import sys
 from pathlib import Path
 
 # 项目根目录
