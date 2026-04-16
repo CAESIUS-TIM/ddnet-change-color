@@ -22,8 +22,8 @@ script_dir = str(Path(__file__).parent)
 sys.path.insert(0, script_dir)
 
 try:
-    from build.builder import build_all_platforms, build_for_platform
-    from build.config import PLATFORM_CONFIG
+    from build_system.builder import build_all_platforms, build_for_platform
+    from build_system.config import PLATFORM_CONFIG
 except ImportError as e:
     print(f"ERROR: Failed to import build module: {e}", file=sys.stderr)
     print(f"DEBUG: Script directory: {script_dir}", file=sys.stderr)
@@ -122,7 +122,7 @@ def main():
     if args.clean:
         import shutil
 
-        from build.config import BUILD_CONFIG
+        from build_system.config import BUILD_CONFIG
 
         build_dir = Path(BUILD_CONFIG["build_dir"])
         dist_dir = Path(BUILD_CONFIG["dist_dir"])
@@ -141,7 +141,7 @@ def main():
 
     # 验证模式
     if args.validate:
-        from build.builder import Builder
+        from build_system.builder import Builder
 
         platform = args.platform
         if not platform:
