@@ -165,18 +165,10 @@ if platform_key == "darwin":
     if info_plist and Path(info_plist).exists():
         exe.info_plist = info_plist
     
-    # macOS 应用包
-    # 不传递 icon 参数，让 PyInstaller 使用默认图标
-    coll = COLLECT(
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
-        strip=False,
-        upx=True,
-        upx_exclude=[],
-        name=platform_config.get("name", "DDNet Change Color"),
-    )
+    # macOS 应用包 (目录模式)
+    # 在目录模式下，产物是目录，不需要 COLLECT
+    # 直接使用 exe
+    coll = exe
 else:
     # 单文件模式或目录模式
     coll = exe
