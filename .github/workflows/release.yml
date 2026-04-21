@@ -192,7 +192,8 @@ jobs:
     
     - name: Build macOS application
       run: |
-        uv run python build_script.py --platform darwin --no-onefile --clean
+        # macOS 使用 onefile 模式生成 .app 目录
+        uv run python build_script.py --platform darwin --onefile --clean
         if [ $? -ne 0 ]; then
           echo "Build failed"
           exit 1
@@ -201,7 +202,7 @@ jobs:
     - name: Find and package macOS application
       run: |
         VERSION="${{ steps.get_version.outputs.VERSION }}"
-        # 查找 .app 目录
+        # onefile 模式会生成 .app 目录
         APP_DIR=$(find dist -name "*.app" -maxdepth 1 -type d | head -1)
         if [ -z "$APP_DIR" ]; then
           echo "Error: No .app bundle found in dist/"
@@ -209,8 +210,7 @@ jobs:
           exit 1
         fi
         APP_NAME=$(basename "$APP_DIR")
-        echo "Found app: $APP_NAME"
-        # Create ZIP
+        echo "Found app bundle: $APP_NAME"
         cd dist
         zip -r "ddnet-change-color-macos-$VERSION.zip" "$APP_NAME"
         echo "ARTIFACT_PATH=dist/ddnet-change-color-macos-$VERSION.zip" >> $GITHUB_OUTPUT
