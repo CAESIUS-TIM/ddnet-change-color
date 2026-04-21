@@ -192,8 +192,8 @@ jobs:
     
     - name: Build macOS application
       run: |
-        # macOS 使用 onefile 模式生成 .app 目录
-        uv run python build_script.py --platform darwin --onefile --clean
+        # macOS 使用单文件模式（默认）生成 .app 目录
+        uv run python build_script.py --platform darwin --clean
         if [ $? -ne 0 ]; then
           echo "Build failed"
           exit 1
