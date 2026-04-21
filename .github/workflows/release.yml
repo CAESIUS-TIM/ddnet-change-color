@@ -4,6 +4,13 @@ on:
   push:
     tags: [ 'v*' ]
 
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-tag:
     name: Validate tag is on main branch
@@ -46,9 +53,18 @@ jobs:
     
     - name: Install uv
       uses: astral-sh/setup-uv@v8.0.0
+      with:
+        enable-cache: true
     
     - name: Set up Python
       run: uv python install 3.14
+    
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: uv-win-${{ hashFiles('pyproject.toml') }}
+        restore-keys: uv-win-
     
     - name: Install build dependencies
       run: uv sync --dev --group build
@@ -86,12 +102,30 @@ jobs:
           exit 1
         }
     
-    - name: Rename Windows artifact
+    - name: Verify Windows build output
+      run: |
+        $exeFiles = Get-ChildItem "dist/*.exe" -ErrorAction SilentlyContinue
+        if ($exeFiles.Count -eq 0) {
+          Write-Host "Error: No .exe files found after build"
+          exit 1
+        }
+        Write-Host "Verified: $($exeFiles.Count) executable(s) found"
+    
+    - name: Find and rename Windows artifact
       run: |
         $version = "${{ steps.get_version.outputs.VERSION }}"
-        $exePath = "dist/ddnet-change-color-windows-$version.exe"
-        Move-Item "dist/ddnet-change-color-windows.exe" $exePath -Force
-        echo "ARTIFACT_PATH=$exePath" >> $env:GITHUB_OUTPUT
+        # 查找所有 .exe 文件，排除 sha256 文件
+        $exe = Get-ChildItem "dist/*.exe" | Where-Object { $_.Name -notmatch "\.sha256" } | Select-Object -First 1
+        if ($exe) {
+          $newName = "ddnet-change-color-windows-$version.exe"
+          Move-Item $exe.FullName "dist/$newName" -Force
+          echo "ARTIFACT_PATH=dist/$newName" >> $env:GITHUB_OUTPUT
+          Write-Host "Found and renamed: $($exe.Name) -> $newName"
+        } else {
+          Write-Host "Error: No executable found in dist/"
+          Get-ChildItem "dist" | Format-Table -AutoSize
+          exit 1
+        }
       id: rename_windows
     
     - name: Calculate SHA256 checksum (Windows)
@@ -132,9 +166,18 @@ jobs:
     
     - name: Install uv
       uses: astral-sh/setup-uv@v8.0.0
+      with:
+        enable-cache: true
     
     - name: Set up Python
       run: uv python install 3.14
+    
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: uv-macos-${{ hashFiles('pyproject.toml') }}
+        restore-keys: uv-macos-
     
     - name: Install build dependencies
       run: uv sync --dev --group build
@@ -155,14 +198,21 @@ jobs:
           exit 1
         fi
     
-    - name: Package macOS application
+    - name: Find and package macOS application
       run: |
         VERSION="${{ steps.get_version.outputs.VERSION }}"
-        APP_NAME="DDNet Change Color"
-        
-        # Create DMG or ZIP
+        # 查找 .app 目录
+        APP_DIR=$(find dist -name "*.app" -maxdepth 1 -type d | head -1)
+        if [ -z "$APP_DIR" ]; then
+          echo "Error: No .app bundle found in dist/"
+          ls -la dist/
+          exit 1
+        fi
+        APP_NAME=$(basename "$APP_DIR")
+        echo "Found app: $APP_NAME"
+        # Create ZIP
         cd dist
-        zip -r "ddnet-change-color-macos-$VERSION.zip" "$APP_NAME.app"
+        zip -r "ddnet-change-color-macos-$VERSION.zip" "$APP_NAME"
         echo "ARTIFACT_PATH=dist/ddnet-change-color-macos-$VERSION.zip" >> $GITHUB_OUTPUT
       id: package_macos
     
@@ -204,9 +254,18 @@ jobs:
     
     - name: Install uv
       uses: astral-sh/setup-uv@v8.0.0
+      with:
+        enable-cache: true
     
     - name: Set up Python
       run: uv python install 3.14
+    
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: uv-linux-${{ hashFiles('pyproject.toml') }}
+        restore-keys: uv-linux-
     
     - name: Install system dependencies
       run: |
@@ -248,18 +307,26 @@ jobs:
           exit 1
         fi
     
-    - name: Package Linux executable
+    - name: Find and package Linux executable
       run: |
         VERSION="${{ steps.get_version.outputs.VERSION }}"
-        EXECUTABLE="dist/ddnet-change-color-linux"
+        # 查找可执行文件（可能在子目录中）
+        EXECUTABLE=$(find dist -type f -executable ! -name "*.sha256*" ! -name "*.txt" | head -1)
+        if [ -z "$EXECUTABLE" ]; then
+          echo "Error: No executable found in dist/"
+          find dist -type f -ls
+          exit 1
+        fi
+        EXE_NAME=$(basename "$EXECUTABLE")
+        echo "Found executable: $EXE_NAME"
+        # 重命名并创建归档
+        NEW_NAME="ddnet-change-color-linux-$VERSION"
+        mv "$EXECUTABLE" "dist/$NEW_NAME"
+        chmod +x "dist/$NEW_NAME"
         
-        # Rename with version
-        mv "$EXECUTABLE" "$EXECUTABLE-$VERSION"
-        chmod +x "$EXECUTABLE-$VERSION"
-        
-        # Create archive
+        # 创建 tar.gz（排除原可执行文件）
         cd dist
-        tar czf "ddnet-change-color-linux-$VERSION.tar.gz" "ddnet-change-color-linux-$VERSION"
+        tar czf "ddnet-change-color-linux-$VERSION.tar.gz" "$NEW_NAME"
         echo "ARTIFACT_PATH=dist/ddnet-change-color-linux-$VERSION.tar.gz" >> $GITHUB_OUTPUT
       id: package_linux
     

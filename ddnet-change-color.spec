@@ -16,11 +16,13 @@ src_dir = project_root / "src"
 
 # 添加源代码路径
 sys.path.insert(0, str(src_dir))
+# 添加构建系统路径
+sys.path.insert(0, str(project_root))
 
 # 导入构建配置
 try:
-    from build.config import BUILD_CONFIG, PLATFORM_CONFIG
-    from build.utils import collect_qt_plugins, collect_translations
+    from build_system.config import BUILD_CONFIG, PLATFORM_CONFIG
+    from build_system.utils import collect_qt_plugins, collect_translations
 except ImportError:
     # 回退到简单配置
     BUILD_CONFIG = {
