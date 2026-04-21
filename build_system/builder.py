@@ -328,30 +328,39 @@ class Builder:
             # 只有在非 spec 模式下才添加 UPX 配置
             if self.build_config.get("upx", True):
                 args.append("--upx-dir")
-                args.append(str(PROJECT_ROOT / "tools" / "upx"))  # 假设 UPX 在此目录
+                args.append(str(PROJECT_ROOT / "tools" / "upx"))
 
             # UPX 排除列表
             for exclude in self.config.get("upx_exclude", []):
                 args.append(f"--upx-exclude={exclude}")
         else:
             # 在 spec 模式下，移除可能由 get_pyinstaller_args 添加的不被允许的参数
-            # 例如 "--upx-exclude=vcruntime140.dll", "--onefile", "--windowed"
             filtered_args = []
-            i = 0
-            while i < len(args):
-                arg = args[i]
+            skip_next = False
+            for _i, arg in enumerate(args):
+                if skip_next:
+                    skip_next = False
+                    continue
                 if arg.startswith("--upx-exclude="):
-                    # 跳过 UPX 排除项
-                    i += 1
+                    continue
                 elif arg in ("--onefile", "--windowed"):
-                    # 跳过 makespec 选项
-                    i += 1
+                    continue
                 elif arg == "--upx-dir":
-                    # 跳过 --upx-dir 及其参数
-                    i += 2  # 跳过 --upx-dir 和下一个参数
-                else:
-                    filtered_args.append(arg)
-                    i += 1
+                    skip_next = True
+                    continue
+                elif arg in ("--icon", "--version-file", "--info-plist"):
+                    skip_next = True
+                    continue
+                elif (
+                    arg.startswith("--icon=")
+                    or arg.startswith("--version-file=")
+                    or arg.startswith("--info-plist=")
+                ):
+                    continue
+                elif arg == "--name":
+                    skip_next = True
+                    continue
+                filtered_args.append(arg)
             args = filtered_args
 
         return args
