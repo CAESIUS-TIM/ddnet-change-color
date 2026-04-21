@@ -130,6 +130,20 @@ exe_name = platform_config.get("name", "ddnet-change-color")
 if platform_key == "windows":
     exe_name += ".exe"
 
+# 图标文件验证
+icon_path = None
+if "icon" in platform_config:
+    icon_file = Path(platform_config["icon"])
+    if icon_file.exists():
+        # 验证图标文件格式
+        try:
+            from PIL import Image
+            with Image.open(icon_file) as img:
+                img.verify()
+            icon_path = str(icon_file)
+        except Exception as e:
+            print(f"Warning: Invalid icon file {icon_file}: {e}")
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -150,7 +164,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=platform_config.get("icon") if Path(platform_config.get("icon", "")).exists() else None,
+    icon=icon_path,
 )
 
 # Windows 特定配置
@@ -166,6 +180,13 @@ if platform_key == "darwin":
         exe.info_plist = info_plist
     
     # macOS 应用包
+    # macOS 图标验证
+    macos_icon_path = None
+    if "icon" in platform_config:
+        icon_file = Path(platform_config["icon"])
+        if icon_file.exists():
+            macos_icon_path = str(icon_file)
+    
     coll = COLLECT(
         exe,
         a.binaries,
@@ -175,7 +196,7 @@ if platform_key == "darwin":
         upx=True,
         upx_exclude=[],
         name=platform_config.get("name", "DDNet Change Color"),
-        icon=platform_config.get("icon") if Path(platform_config.get("icon", "")).exists() else None,
+        icon=macos_icon_path,
     )
 else:
     # 单文件模式或目录模式
