@@ -192,7 +192,7 @@ jobs:
     
     - name: Build macOS application
       run: |
-        # macOS 使用单文件模式（默认）生成 .app 目录
+        # macOS 使用单文件模式（默认）生成可执行文件
         uv run python build_script.py --platform darwin --clean
         if [ $? -ne 0 ]; then
           echo "Build failed"
@@ -202,17 +202,27 @@ jobs:
     - name: Find and package macOS application
       run: |
         VERSION="${{ steps.get_version.outputs.VERSION }}"
-        # onefile 模式会生成 .app 目录
+        
+        # 查找 .app 目录
         APP_DIR=$(find dist -name "*.app" -maxdepth 1 -type d | head -1)
-        if [ -z "$APP_DIR" ]; then
-          echo "Error: No .app bundle found in dist/"
-          ls -la dist/
-          exit 1
+        if [ -n "$APP_DIR" ]; then
+          # 找到 .app 目录，直接打包
+          APP_NAME=$(basename "$APP_DIR")
+          echo "Found app bundle: $APP_NAME"
+          cd dist
+          zip -r "ddnet-change-color-macos-$VERSION.zip" "$APP_NAME"
+        else
+          # 没有 .app，使用 Python 脚本创建 .app 结构
+          EXE_FILE=$(find dist -maxdepth 1 -type f -executable | head -1)
+          if [ -z "$EXE_FILE" ]; then
+            echo "Error: No executable found in dist/"
+            ls -la dist/
+            exit 1
+          fi
+          echo "Found executable: $EXE_FILE"
+          # 使用 Python 脚本创建 .app 结构
+          uv run python package_macos.py "$EXE_FILE" "$VERSION" "dist"
         fi
-        APP_NAME=$(basename "$APP_DIR")
-        echo "Found app bundle: $APP_NAME"
-        cd dist
-        zip -r "ddnet-change-color-macos-$VERSION.zip" "$APP_NAME"
         echo "ARTIFACT_PATH=dist/ddnet-change-color-macos-$VERSION.zip" >> $GITHUB_OUTPUT
       id: package_macos
     
