@@ -213,7 +213,7 @@ jobs:
           zip -r "ddnet-change-color-macos-$VERSION.zip" "$APP_NAME"
         else
           # 没有 .app，使用 Python 脚本创建 .app 结构
-          EXE_FILE=$(find dist -maxdepth 1 -type f -executable | head -1)
+          EXE_FILE=$(ls dist/ddnet-change-color-macos-* | head -1)
           if [ -z "$EXE_FILE" ]; then
             echo "Error: No executable found in dist/"
             ls -la dist/
